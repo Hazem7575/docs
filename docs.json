@@ -21,6 +21,10 @@
     "eyebrows": "breadcrumbs", 
     "codeblocks": "system" 
   },
+    "styling": {
+    "eyebrows": "breadcrumbs",
+    "codeblocks": "system"
+  },
   "favicon": "/favicon.svg",
   "navigation": {
     "tabs": [
