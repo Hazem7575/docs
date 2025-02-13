@@ -17,11 +17,6 @@
       "to": "#22C55E"
     }
   },
-  "styling": {
-    "eyebrows": "breadcrumbs", 
-    "codeblocks": "system" 
-  },
-    
   "favicon": "/favicon.svg",
   "navigation": {
     "tabs": [
