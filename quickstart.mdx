@@ -1,97 +1,212 @@
----
-title: 'Quickstart'
-description: 'Start building awesome documentation in under 5 minutes'
----
+# Hazem/Zatca
 
-## Setup your development
+ZATCA (Fatoora) e-invoicing implementation for Saudi Arabia.
 
-Learn how to update your docs locally and deploy them to the public.
+## المحتويات
+- [التثبيت](#التثبيت)
+- [الإعداد](#الإعداد)
+- [الاستخدام الأساسي](#الاستخدام-الأساسي)
+- [إرسال الفواتير](#إرسال-الفواتير)
+- [تخصيص البيانات](#تخصيص-البيانات)
+- [التحقق من حالة الفواتير](#التحقق-من-حالة-الفواتير)
+- [هيكل قاعدة البيانات](#هيكل-قاعدة-البيانات)
 
-### Edit and preview
+## التثبيت
 
-<AccordionGroup>
-  <Accordion icon="github" title="Clone your docs locally">
-    During the onboarding process, we created a repository on your Github with
-    your docs content. You can find this repository on our
-    [dashboard](https://dashboard.mintlify.com). To clone the repository
-    locally, follow these
-    [instructions](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository)
-    in your terminal.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Preview changes">
-    Previewing helps you make sure your changes look as intended. We built a
-    command line interface to render these changes locally. 
-    1. Install the
-    [Mintlify CLI](https://www.npmjs.com/package/mintlify) to preview the
-    documentation changes locally with this command: ``` npm i -g mintlify ```
-    2. Run the following command at the root of your documentation (where
-    `docs.json` is): ``` mintlify dev ```
-    <Note>
-      If you’re currently using the legacy ```mint.json``` configuration file, please update the Mintlify CLI:
+يمكنك تثبيت الحزمة عبر Composer:
 
+```bash
+composer require hazem/zatca
+```
 
-      ```npm i -g mintlify@latest```
-      And run the new upgrade command in your docs repository:
+## الإعداد
 
-      ```mintlify upgrade```
-      You should now be using the new ```docs.json``` configuration file. Feel free to delete the ```mint.json``` file from your repository.
-    </Note>
-  </Accordion>
-</AccordionGroup>
+1. نشر ملفات الإعداد والترحيل:
 
-### Deploy your changes
+```bash
+php artisan vendor:publish --provider="Hazem\Zatca\ZatcaServiceProvider"
+```
 
-<AccordionGroup>
+2. تشغيل الترحيلات:
 
-<Accordion icon="message-bot" title="Install our Github app">
-  Our Github app automatically deploys your changes to your docs site, so you
-  don't need to manage deployments yourself. You can find the link to install on
-  your [dashboard](https://dashboard.mintlify.com). Once the bot has been
-  successfully installed, there should be a check mark next to the commit hash
-  of the repo.
-</Accordion>
-<Accordion icon="rocket" title="Push your changes">
-  [Commit and push your changes to
-  Git](https://docs.github.com/en/get-started/using-git/pushing-commits-to-a-remote-repository#about-git-push)
-  for your changes to update in your docs site. If you push and don't see that
-  the Github app successfully deployed your changes, you can also manually
-  update your docs through our [dashboard](https://dashboard.mintlify.com).
-</Accordion>
+```bash
+php artisan migrate
+```
 
-</AccordionGroup>
+3. إعداد متغيرات البيئة في ملف `.env`:
 
-## Update your docs
+```env
+ZATCA_LIVE=false
+ZATCA_VAT_NO=
+ZATCA_COMPANY_NAME=
+# ... باقي الإعدادات
+```
 
-Add content directly in your files with MDX syntax and React components. You can use any of our components, or even build your own.
+## الاستخدام الأساسي
 
-<CardGroup>
+### إضافة السمات للنموذج
 
-<Card title="Add Content With MDX" icon="file" href="/essentials/markdown">
-  Add content to your docs with MDX syntax.
-</Card>
+أضف السمات `HasZatcaDevice` و `HasZatcaInvoice` إلى النموذج الخاص بك:
 
-<Card
-  title="Add Code Blocks"
-  icon="square-code"
-  href="/essentials/code"
->
-  Add code directly to your docs with syntax highlighting.
-</Card>
+```php
+use Hazem\Zatca\Traits\HasZatcaDevice;
+use Hazem\Zatca\Traits\HasZatcaInvoice;
 
-<Card
-  title="Add Images"
-  icon="image"
-  href="/essentials/images"
->
-  Add images to your docs to make them more engaging.
-</Card>
+class Order extends Model
+{
+    use HasZatcaDevice, HasZatcaInvoice;
+}
+```
 
-<Card
-  title="Add Custom Components"
-  icon="puzzle-piece"
-  href="/essentials/reusable-snippets"
->
-  Add templates to your docs to make them more reusable.
-</Card>
+### تسجيل جهاز جديد
 
-</CardGroup>
+```php
+$order = Order::find(1);
+$device = $order->registerZatcaDevice($otp, [
+    'vat_no' => '123456789',
+    'company_name' => 'شركتي',
+    // ... باقي البيانات
+]);
+```
+
+## إرسال الفواتير
+
+### الطريقة الأساسية
+
+```php
+$order = Order::find(1);
+$result = $order->submitToZatca();
+```
+
+### تخصيص البيانات
+
+```php
+$result = $order->submitToZatca([
+    'invoice_number' => 'INV-001',
+    'buyer_name' => 'عميل',
+    'buyer_vat' => '1234567890',
+    'total_amount' => 100,
+    'vat_amount' => 15,
+    'items' => [
+        [
+            'name' => 'منتج 1',
+            'quantity' => 1,
+            'price' => 100,
+            'vat' => 15
+        ]
+    ]
+]);
+```
+
+### تخصيص إعداد البيانات
+
+يمكنك تجاوز الطرق الافتراضية في النموذج الخاص بك:
+
+```php
+class Order extends Model
+{
+    use HasZatcaInvoice;
+
+    protected function prepareZatcaInvoiceData()
+    {
+        return [
+            'invoice_number' => $this->custom_number,
+            'buyer_name' => $this->client->name,
+            // ... باقي البيانات المخصصة
+        ];
+    }
+
+    protected function prepareZatcaItems()
+    {
+        return $this->orderItems->map(function($item) {
+            return [
+                'name' => $item->product->name,
+                'quantity' => $item->quantity,
+                'price' => $item->unit_price,
+                'vat' => $item->tax_amount
+            ];
+        })->toArray();
+    }
+}
+```
+
+## التحقق من حالة الفواتير
+
+```php
+// التحقق من إرسال الفاتورة
+if ($order->isSubmittedToZatca()) {
+    // تم الإرسال
+}
+
+// الحصول على حالة الفاتورة
+$status = $order->getZatcaStatus();
+
+// التحقق من وجود أخطاء
+if ($order->hasZatcaErrors()) {
+    $errors = $order->getZatcaErrors();
+}
+```
+
+## هيكل قاعدة البيانات
+
+### جدول `hazem_devices_zatca`
+
+يخزن معلومات الأجهزة المسجلة:
+
+- `id` - معرف تسلسلي
+- `deviceable_type` - نوع النموذج المرتبط
+- `deviceable_id` - معرف النموذج المرتبط
+- `request_id` - معرف الطلب من ZATCA
+- `disposition_message` - رسالة الحالة
+- `binary_security_token` - رمز الأمان
+- `secret` - المفتاح السري
+- `errors` - الأخطاء (JSON)
+- `private_key` - المفتاح الخاص
+- `public_key` - المفتاح العام
+- `csr_content` - محتوى CSR
+
+### جدول `hazem_orders_zatca`
+
+يخزن معلومات الفواتير المرسلة:
+
+- `id` - معرف تسلسلي
+- `orderable_type` - نوع النموذج المرتبط
+- `orderable_id` - معرف النموذج المرتبط
+- `invoice_number` - رقم الفاتورة
+- `uuid` - معرف فريد
+- `invoice_hash` - هاش الفاتورة
+- `signed_invoice_xml` - XML الموقع
+- `status` - حالة الفاتورة
+- `is_reported` - تم الإبلاغ
+- `is_cleared` - تم المقاصة
+- `warnings` - التحذيرات (JSON)
+- `errors` - الأخطاء (JSON)
+- `response` - الرد الكامل (JSON)
+- `submitted_at` - وقت الإرسال
+
+## الدوال المتاحة
+
+### HasZatcaDevice Trait
+
+- `zatcaDevice()` - علاقة مع جهاز ZATCA
+- `registerZatcaDevice()` - تسجيل جهاز جديد
+- `hasZatcaDevice()` - التحقق من وجود جهاز
+- `getLatestZatcaDevice()` - الحصول على آخر جهاز
+
+### HasZatcaInvoice Trait
+
+- `zatcaOrders()` - علاقة مع فواتير ZATCA
+- `latestZatcaOrder()` - آخر فاتورة
+- `submitToZatca()` - إرسال فاتورة
+- `isSubmittedToZatca()` - التحقق من الإرسال
+- `getZatcaStatus()` - حالة الفاتورة
+- `hasZatcaErrors()` - التحقق من الأخطاء
+- `getZatcaErrors()` - الحصول على الأخطاء
+
+## المساهمة
+
+نرحب بالمساهمات! يرجى إرسال pull requests إلى مستودع GitHub.
+
+## الترخيص
+
+مرخص تحت MIT License.
