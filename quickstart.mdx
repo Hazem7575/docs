@@ -1,11 +1,9 @@
 ---
-title: 'Zatca Package'
-description: 'ZATCA (Fatoora) e-invoicing implementation for Saudi Arabia'
+title: 'Quick Start Guide'
+description: 'Get started with ZATCA (Fatoora) e-invoicing implementation for Saudi Arabia'
 ---
 
-## Getting Started
-
-### Requirements
+## Requirements
 
 <Note>
   Before installation, ensure your system meets the following requirements:
@@ -23,18 +21,16 @@ description: 'ZATCA (Fatoora) e-invoicing implementation for Saudi Arabia'
   * cURL Extension
 </Note>
 
-### Quick Setup
+## Installation & Setup
 
 <AccordionGroup>
-  <Accordion icon="terminal" title="Installation">
-    Install the package via Composer:
-
+  <Accordion icon="terminal" title="Install Package">
     ```bash
     composer require hazem/zatca
     ```
   </Accordion>
 
-  <Accordion icon="gear" title="Configuration">
+  <Accordion icon="gear" title="Configure Package">
     1. Publish configuration and migrations:
 
     ```bash
@@ -48,60 +44,60 @@ description: 'ZATCA (Fatoora) e-invoicing implementation for Saudi Arabia'
     ```
   </Accordion>
 
-  <Accordion icon="file" title="Environment Setup">
-    Configure your `.env` file with the following variables:
+  <Accordion icon="file" title="Environment Variables">
+    Add the following to your `.env` file:
 
     ```env
     ZATCA_LIVE=false
+    ZATCA_VAT_NO=
+    ZATCA_COMPANY_NAME=
+    ZATCA_SOLUTION_NAME=MADA
+    ZATCA_BUSINESS_CATEGORY=Contracting
     ```
   </Accordion>
 </AccordionGroup>
 
-## Basic Implementation
+## Basic Usage
 
-### Device Management
+### Device Registration
 
-<CardGroup>
-  <Card title="Setup Device Trait" icon="plug">
-    Add the HasZatcaDevice trait to your model:
+First, add the HasZatcaDevice trait to your model:
 
-    ```php
-    use Hazem\Zatca\Traits\HasZatcaDevice;
+```php
+use Hazem\Zatca\Traits\HasZatcaDevice;
 
-    class Order extends Model
-    {
-        use HasZatcaDevice;
-    }
-    ```
-  </Card>
+class Store extends Model
+{
+    use HasZatcaDevice;
+}
+```
 
-  <Card title="Register Device" icon="server">
-    Register a new ZATCA device:
+Then register your device:
 
-    ```php
-    $business = Store::find(1);
-    $device = $business->registerZatcaDevice($request->otp, [
-                'vat_no' => $request->tax_number,
-                'ci_no' => $request->registration_number,
-                'company_name' => $request->organization_name,
-                'company_address' => $request->registered_address,
-                'company_building' => $request->building_number,
-                'company_plot_identification' => $request->plot_identification,
-                'company_city_subdivision' => $request->city_sub_division,
-                'company_city' => $request->city,
-                'company_postal' => $request->postal_number,
-                'company_country' => 'SA',
-                'solution_name' => 'MADA',
-                'common_name' => $request->common_name,
-            ])->active();
-    ```
-  </Card>
-</CardGroup>
+```php
+$business = Store::find(1);
+$device = $business->registerZatcaDevice($request->otp, [
+    'vat_no' => $request->tax_number,
+    'ci_no' => $request->registration_number,
+    'company_name' => $request->organization_name,
+    'company_address' => $request->registered_address,
+    'company_building' => $request->building_number,
+    'company_plot_identification' => $request->plot_identification,
+    'company_city_subdivision' => $request->city_sub_division,
+    'company_city' => $request->city,
+    'company_postal' => $request->postal_number,
+    'company_country' => 'SA',
+    'solution_name' => 'MADA',
+    'common_name' => $request->common_name,
+])->active();
+```
 
 ### Invoice Creation
 
 <AccordionGroup>
-  <Accordion icon="file-invoice" title="Setup Invoice Trait">
+  <Accordion icon="file-invoice" title="Add Invoice Trait">
+    Add the HasZatcaInvoice trait to your model:
+
     ```php
     use Hazem\Zatca\Traits\HasZatcaInvoice;
 
@@ -147,7 +143,7 @@ description: 'ZATCA (Fatoora) e-invoicing implementation for Saudi Arabia'
     ```
   </Accordion>
 
-  <Accordion icon="wand-magic-sparkles" title="Fluent Interface">
+  <Accordion icon="wand-magic-sparkles" title="Using Fluent Interface">
     Create invoices using the fluent interface:
 
     ```php
@@ -170,237 +166,115 @@ description: 'ZATCA (Fatoora) e-invoicing implementation for Saudi Arabia'
   </Accordion>
 </AccordionGroup>
 
-## Working with Invoices
+### Submit Invoices
 
-### Submission Methods
+<Note>
+  There are two ways to submit invoices to ZATCA: basic submission and custom data submission.
+</Note>
 
-<CardGroup>
-  <Card title="Basic Submission" icon="paper-plane">
-    ```php
-    $result = $order->submitToZatca($invoice->toArray());
-    ```
-  </Card>
+Using the basic submission method:
 
-  <Card title="Custom Data" icon="pen-to-square">
-    ```php
-    $result = $order->submitToZatca([
-        'invoice_number' => 'INV-001',
-        'total_amount' => 115.00,
-        'vat_amount' => 15.00,
-        'items' => [
-            [
-                'name' => 'Product 1',
-                'quantity' => 1,
-                'price' => 100.00,
-                'vat' => 15.00
-            ]
+```php
+$result = $order->submitToZatca($invoice->toArray());
+```
+
+Or submit with custom data:
+
+```php
+$result = $order->submitToZatca([
+    'invoice_number' => 'INV-001',
+    'total_amount' => 115.00,
+    'vat_amount' => 15.00,
+    'items' => [
+        [
+            'name' => 'Product 1',
+            'quantity' => 1,
+            'price' => 100.00,
+            'vat' => 15.00
         ]
-    ]);
-    ```
-  </Card>
-</CardGroup>
+    ]
+]);
+```
 
-### Status Management
+### Check Invoice Status
 
-<CardGroup>
-  <Card title="Check Status" icon="magnifying-glass">
-    ```php
-    if ($order->isSubmittedToZatca()) {
-        $status = $order->getZatcaStatus();
-        
-        if ($order->hasZatcaErrors()) {
-            $errors = $order->getZatcaErrors();
-        }
+Monitor your invoice status using these methods:
+
+```php
+// Check if invoice was submitted
+if ($order->isSubmittedToZatca()) {
+    // Get the current status
+    $status = $order->getZatcaStatus();
+    
+    // Check for any errors
+    if ($order->hasZatcaErrors()) {
+        $errors = $order->getZatcaErrors();
     }
-    ```
-  </Card>
-</CardGroup>
+}
+```
 
-## API Reference
+## Available Methods
 
-### Available Facades
+### Device Operations
 
-<AccordionGroup>
-  <Accordion icon="microchip" title="Device Facade">
-    ```php
-    Device::register(string|int $businessId, string $otp, array $companyData);
-    Device::activate(string|int $businessId);
-    Device::hasDevice(string|int $businessId);
-    Device::getDevice(string|int $businessId);
-    Device::getDeviceStatus(string|int $businessId);
-    Device::isDeviceActive(string|int $businessId);
-    ```
-  </Accordion>
+```php
+// Device Facade Methods
+Device::register(string|int $businessId, string $otp, array $companyData);
+Device::activate(string|int $businessId);
+Device::hasDevice(string|int $businessId);
+Device::getDevice(string|int $businessId);
+Device::getDeviceStatus(string|int $businessId);
+Device::isDeviceActive(string|int $businessId);
 
-  <Accordion icon="file-invoice" title="Zatca Facade">
-    ```php
-    Zatca::prepare();
-    Zatca::submitInvoice(string|int $businessId, array $invoiceData);
-    Zatca::submitSimplifiedInvoice(string|int $businessId, array $invoiceData);
-    Zatca::submitStandardInvoice(string|int $businessId, array $invoiceData);
-    Zatca::submitCreditNote(string|int $businessId, array $invoiceData);
-    Zatca::submitDebitNote(string|int $businessId, array $invoiceData);
-    Zatca::getInvoiceStatus(string|int $businessId, string $invoiceNumber);
-    Zatca::getInvoiceReport(string|int $businessId, string $invoiceNumber);
-    Zatca::clearInvoice(string|int $businessId, string $invoiceNumber);
-    Zatca::reportInvoice(string|int $businessId, string $invoiceNumber);
-    Zatca::registerDevice(string|int $businessId, string $otp, array $companyData);
-    Zatca::validateInvoice(array $invoiceData);
-    Zatca::generateQRCode(array $invoiceData);
-    ```
-  </Accordion>
-</AccordionGroup>
+// HasZatcaDevice Trait Methods
+$model->device();                  // Get device relationship
+$model->registerZatcaDevice();     // Register new device
+$model->active();                  // Activate device
+$model->hasZatcaDevice();         // Check device existence
+$model->getLatestZatcaDevice();   // Get latest device
+```
 
-### Trait Methods
+### Invoice Operations
 
-<CardGroup>
-  <Card title="HasZatcaDevice Methods" icon="gear">
-    * `device()` - Get device relationship
+```php
+// Zatca Facade Methods
+Zatca::prepare();
+Zatca::submitInvoice(string|int $businessId, array $invoiceData);
+Zatca::submitSimplifiedInvoice(string|int $businessId, array $invoiceData);
+Zatca::submitStandardInvoice(string|int $businessId, array $invoiceData);
+Zatca::getInvoiceStatus(string|int $businessId, string $invoiceNumber);
+Zatca::validateInvoice(array $invoiceData);
+Zatca::generateQRCode(array $invoiceData);
 
-    * `registerZatcaDevice()` - Register new device
-
-    * `active()` - Activate device
-
-    * `hasZatcaDevice()` - Check device existence
-
-    * `getLatestZatcaDevice()` - Get latest device
-
-    * `scopeHasZatca()` - Query scope for models with active devices
-
-    * `scopeDoesntHaveZatca()` - Query scope for models without active devices
-  </Card>
-
-  <Card title="HasZatcaInvoice Methods" icon="file-lines">
-    * `order()` - Get order relationship
-
-    * `prepareZatcaInvoiceData()` - Prepare invoice data
-
-    * `prepareZatcaItems()` - Prepare items data
-
-    * `submitToZatca()` - Submit invoice
-
-    * `isSubmittedToZatca()` - Check submission status
-
-    * `getZatcaStatus()` - Get invoice status
-
-    * `hasZatcaErrors()` - Check for errors
-
-    * `getZatcaErrors()` - Get error details
-
-    * `update_last_hash($hash)` - Update last invoice hash
-
-    * `last_hash()` - Get last invoice hash
-  </Card>
-</CardGroup>
+// HasZatcaInvoice Trait Methods
+$model->order();                   // Get order relationship
+$model->submitToZatca();          // Submit invoice
+$model->isSubmittedToZatca();     // Check submission status
+$model->getZatcaStatus();         // Get invoice status
+$model->hasZatcaErrors();         // Check for errors
+$model->getZatcaErrors();         // Get error details
+```
 
 ## Database Structure
 
-### Schema Details
-
 <AccordionGroup>
-  <Accordion icon="table" title="devices_zatca">
-    * `id` - Primary key
+  <Accordion icon="table" title="Database Tables">
+    The package creates three main tables:
 
-    * `deviceable_type` - Model type
+    1. **devices\_zatca**: Stores device registration information
 
-    * `deviceable_id` - Model ID
+    2. **orders\_zatca**: Stores invoice submission details
 
-    * `request_id` - ZATCA request ID
+    3. **company\_data**: Stores company and solution configuration
 
-    * `status` - Device status
-
-    * `disposition_message` - Status message
-
-    * `binary_security_token` - Security token
-
-    * `secret` - Device secret
-
-    * `errors` - Error messages (JSON)
-
-    * `private_key` - Private key
-
-    * `public_key` - Public key
-
-    * `csr_content` - CSR content
-
-    * `timestamps`
-  </Accordion>
-
-  <Accordion icon="table" title="orders_zatca">
-    * `id` - Primary key
-
-    * `orderable_type` - Model type
-
-    * `orderable_id` - Model ID
-
-    * `invoice_number` - Invoice number
-
-    * `uuid` - Unique identifier
-
-    * `invoice_hash` - Invoice hash
-
-    * `signed_invoice_xml` - Signed XML
-
-    * `status` - Invoice status
-
-    * `is_reported` - Reporting status
-
-    * `is_cleared` - Clearance status
-
-    * `warnings` - Warning messages (JSON)
-
-    * `errors` - Error messages (JSON)
-
-    * `response` - Full response (JSON)
-
-    * `submitted_at` - Submission timestamp
-
-    * `timestamps`
-  </Accordion>
-
-  <Accordion icon="table" title="company_data">
-    * `id` - Primary key
-
-    * `solution_name` - Solution name
-
-    * `solution_version` - Solution version
-
-    * `business_category` - Business category
-
-    * `vat_no` - VAT number
-
-    * `ci_no` - Commercial registration number
-
-    * `company_name` - Company name
-
-    * `company_address` - Company address
-
-    * `company_building` - Building number
-
-    * `company_plot_identification` - Plot ID
-
-    * `company_city_subdivision` - City subdivision
-
-    * `company_city` - City
-
-    * `company_postal` - Postal code
-
-    * `company_country` - Country code
-
-    * `company_state` - State
-
-    * `company_phone` - Phone number
-
-    * `company_email` - Email address
-
-    * `timestamps`
+    View full schema details in our [API Reference](/api-reference).
   </Accordion>
 </AccordionGroup>
 
-## Security Features
+## Security
 
 <Note>
-  The package implements several security measures:
+  The package implements comprehensive security measures:
 
   * Row Level Security (RLS) enabled for all tables
 
@@ -413,14 +287,6 @@ description: 'ZATCA (Fatoora) e-invoicing implementation for Saudi Arabia'
   * Data access controlled through policies
 </Note>
 
-## Contributing and License
+## Contributing & License
 
-<CardGroup>
-  <Card title="Contributing" icon="code-pull-request">
-    Contributions are welcome! Please feel free to submit a Pull Request.
-  </Card>
-
-  <Card title="License" icon="scale">
-    This package is open-sourced software licensed under the MIT license.
-  </Card>
-</CardGroup>
+This package is open-source software licensed under the MIT license. Contributions are welcome - please feel free to submit Pull Requests on our GitHub repository.
