@@ -17,33 +17,6 @@
       "to": "#22C55E"
     }
   },
-  "style": {
-    "code": {
-      "theme": "dracula",
-      "scrollbar": true,
-      "lineNumbers": true,
-      "showCopyButton": true,
-      "syntax": {
-        "keyword": "#ff79c6",
-        "string": "#f1fa8c",
-        "function": "#50fa7b",
-        "variable": "#bd93f9",
-        "comment": "#6272a4",
-        "number": "#bd93f9",
-        "tag": "#ff79c6",
-        "attribute": "#50fa7b",
-        "operator": "#ff79c6"
-      }
-    },
-    "headers": {
-      "color": "#16A34A",
-      "weight": "semibold"
-    },
-    "typography": {
-      "font-family": "Inter, system-ui, -apple-system",
-      "code-font-family": "JetBrains Mono, monospace"
-    }
-  },
   "favicon": "/favicon.svg",
   "navigation": {
     "tabs": [
