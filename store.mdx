@@ -1,0 +1,209 @@
+---
+title: 'ZATCA Device Integration Guide'
+description: 'Comprehensive guide for implementing ZATCA device registration and management'
+---
+
+## Device Registration Overview
+
+The ZATCA (Fatoora) e-invoicing system requires device registration before submitting invoices. This guide covers all aspects of device implementation and management.
+
+## Implementation Steps
+
+### 1. Add Device Trait
+
+First, add the `HasZatcaDevice` trait to your model:
+
+```php
+use Hazem\Zatca\Traits\HasZatcaDevice;
+
+class Store extends Model
+{
+    use HasZatcaDevice;
+}
+```
+
+### 2. Available Device Methods
+
+The `HasZatcaDevice` trait provides several methods for device management:
+
+```php
+// Core Device Methods
+device();                    // Get device relationship
+registerZatcaDevice();       // Register new device
+active();                    // Activate device
+hasZatcaDevice();           // Check device existence
+getLatestZatcaDevice();     // Get latest device
+
+// Query Scopes
+scopeHasZatca();            // Query scope for models with active devices
+scopeDoesntHaveZatca();     // Query scope for models without active devices
+```
+
+## Device Registration Process
+
+### Basic Registration
+
+```php
+$business = Store::find(1);
+$device = $business->registerZatcaDevice($otp, [
+    'vat_no' => '123456789',
+    'ci_no' => 'CR123456',
+    'company_name' => 'My Company',
+    'company_address' => 'Street Address',
+    'company_building' => 'Building 123',
+    'company_plot_identification' => 'Plot-456',
+    'company_city_subdivision' => 'District',
+    'company_city' => 'Riyadh',
+    'company_postal' => '12345',
+    'company_country' => 'SA',
+    'solution_name' => 'MADA',
+    'common_name' => 'Device-001'
+])->active();
+```
+
+### Using Device Facade
+
+The Device Facade provides high-level methods for device management:
+
+```php
+// Device Registration
+Device::register(string|int $businessId, string $otp, array $companyData);
+
+// Device Status Management
+Device::activate(string|int $businessId);
+Device::hasDevice(string|int $businessId);
+Device::getDevice(string|int $businessId);
+Device::getDeviceStatus(string|int $businessId);
+Device::isDeviceActive(string|int $businessId);
+```
+
+## Device Database Schema
+
+The `devices_zatca` table stores all device-related information:
+
+| Column                  | Type        | Description       |
+| ----------------------- | ----------- | ----------------- |
+| `id`                    | Primary Key | Unique identifier |
+| `deviceable_type`       | String      | Model type        |
+| `deviceable_id`         | Integer     | Model ID          |
+| `request_id`            | String      | ZATCA request ID  |
+| `status`                | String      | Device status     |
+| `disposition_message`   | Text        | Status message    |
+| `binary_security_token` | Text        | Security token    |
+| `secret`                | Text        | Device secret     |
+| `errors`                | JSON        | Error messages    |
+| `private_key`           | Text        | Private key       |
+| `public_key`            | Text        | Public key        |
+| `csr_content`           | Text        | CSR content       |
+| `created_at`            | Timestamp   | Creation date     |
+| `updated_at`            | Timestamp   | Last update date  |
+
+## Security Considerations
+
+### Device Security Features
+
+1. **Private Key Protection**
+
+   * Secure storage of device private keys
+
+   * Encryption at rest
+
+   * Access control through Laravel policies
+
+2. **Token Management**
+
+   * Secure handling of binary security tokens
+
+   * Automated token refresh
+
+   * Token validation on each request
+
+3. **Error Handling**
+
+   * Comprehensive error logging
+
+   * Secure error message storage
+
+   * Error tracking and monitoring
+
+## Best Practices
+
+1. **Device Registration**
+
+   * Always validate OTP before registration
+
+   * Store device credentials securely
+
+   * Implement proper error handling
+
+2. **Device Management**
+
+   * Regularly check device status
+
+   * Implement automatic device reactivation
+
+   * Monitor device errors and warnings
+
+3. **Security**
+
+   * Use environment variables for sensitive data
+
+   * Implement proper access controls
+
+   * Regular security audits
+
+## Common Issues and Solutions
+
+### Device Registration Issues
+
+1. **Invalid OTP**
+
+   * Ensure OTP is valid and not expired
+
+   * Verify OTP format matches ZATCA requirements
+
+2. **Registration Failures**
+
+   * Check company data completeness
+
+   * Verify network connectivity
+
+   * Validate API credentials
+
+3. **Device Activation**
+
+   * Ensure proper activation sequence
+
+   * Check for missing credentials
+
+   * Verify device status before use
+
+## Environment Configuration
+
+Add these device-related variables to your `.env` file:
+
+```env
+ZATCA_LIVE=false
+```
+
+## Error Handling Examples
+
+```php
+try {
+    $device = $business->registerZatcaDevice($otp, $companyData);
+} catch (DeviceRegistrationException $e) {
+    // Handle registration errors
+    Log::error('Device registration failed: ' . $e->getMessage());
+} catch (ValidationException $e) {
+    // Handle validation errors
+    $errors = $e->errors();
+}
+```
+
+## Additional Resources
+
+* [ZATCA Official Documentation](https://zatca.gov.sa)
+
+* [API Reference](/api-reference)
+
+* [Troubleshooting Guide](/troubleshooting)
