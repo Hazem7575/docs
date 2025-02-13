@@ -3,91 +3,202 @@ title: 'Zatca Package'
 description: 'ZATCA (Fatoora) e-invoicing implementation for Saudi Arabia'
 ---
 
-## Setup your package
-Learn how to install and configure the Zatca package for your Laravel application.
+## Getting Started
 
-### Installation and Configuration
+### Requirements
+
+<Note>
+  Before installation, ensure your system meets the following requirements:
+
+  * PHP ^7.4|^8.0
+
+  * Laravel ^8.0|^9.0|^10.0
+
+  * OpenSSL Extension
+
+  * JSON Extension
+
+  * DOM Extension
+
+  * cURL Extension
+</Note>
+
+### Quick Setup
+
 <AccordionGroup>
-  <Accordion icon="terminal" title="Install via Composer">
-    Install the package using Composer with the following command:
+  <Accordion icon="terminal" title="Installation">
+    Install the package via Composer:
+
     ```bash
     composer require hazem/zatca
     ```
   </Accordion>
-  <Accordion icon="gear" title="Publish Configuration">
-    Publish the configuration files and migrations:
+
+  <Accordion icon="gear" title="Configuration">
+    1. Publish configuration and migrations:
+
     ```bash
     php artisan vendor:publish --provider="Hazem\Zatca\ZatcaServiceProvider"
     ```
-    Then run the migrations:
+
+    2. Run migrations:
+
     ```bash
     php artisan migrate
     ```
   </Accordion>
+
   <Accordion icon="file" title="Environment Setup">
-    Configure your environment variables in `.env`:
+    Configure your `.env` file with the following variables:
+
     ```env
     ZATCA_LIVE=false
     ZATCA_VAT_NO=
     ZATCA_COMPANY_NAME=
-    # Additional settings as needed
+    ZATCA_SOLUTION_NAME=PREZATCA
+    ZATCA_SOLUTION_VERSION=1.0
+    ZATCA_BUSINESS_CATEGORY=Contracting
+    ZATCA_CI_NO=
+    ZATCA_COMPANY_ADDRESS=
+    ZATCA_COMPANY_BUILDING=
+    ZATCA_COMPANY_PLOT_ID=
+    ZATCA_COMPANY_CITY_SUBDIVISION=
+    ZATCA_COMPANY_CITY=
+    ZATCA_COMPANY_POSTAL=
+    ZATCA_COMPANY_COUNTRY=SA
+    ZATCA_COMPANY_STATE=
+    ZATCA_COMPANY_PHONE=
+    ZATCA_COMPANY_EMAIL=
     ```
   </Accordion>
 </AccordionGroup>
 
-### Basic Implementation
-<AccordionGroup>
-  <Accordion icon="code" title="Add Required Traits">
-    Add the necessary traits to your model:
+## Basic Implementation
+
+### Device Management
+
+<CardGroup>
+  <Card title="Setup Device Trait" icon="plug">
+    Add the HasZatcaDevice trait to your model:
+
     ```php
     use Hazem\Zatca\Traits\HasZatcaDevice;
-    use Hazem\Zatca\Traits\HasZatcaInvoice;
 
     class Order extends Model
     {
-        use HasZatcaDevice, HasZatcaInvoice;
+        use HasZatcaDevice;
     }
     ```
-  </Accordion>
-  <Accordion icon="server" title="Register Device">
+  </Card>
+
+  <Card title="Register Device" icon="server">
     Register a new ZATCA device:
+
     ```php
     $order = Order::find(1);
     $device = $order->registerZatcaDevice($otp, [
         'vat_no' => '123456789',
         'company_name' => 'My Company',
-        // Additional configuration
     ]);
+    ```
+  </Card>
+</CardGroup>
+
+### Invoice Creation
+
+<AccordionGroup>
+  <Accordion icon="file-invoice" title="Setup Invoice Trait">
+    ```php
+    use Hazem\Zatca\Traits\HasZatcaInvoice;
+
+    class Order extends Model
+    {
+        use HasZatcaInvoice;
+        
+        protected function prepareZatcaInvoiceData()
+        {
+            $items = $this->prepareZatcaItems();
+            return [
+                'invoice_number' => $this->invoice_no,
+                'total_amount' => round($this->final_total, 2),
+                'vat_amount' => collect($items)->sum(function ($item) {
+                    return round($item['vat'] * $item['quantity'], 2);
+                }),
+                'is_pos' => true,
+                'is_invoice' => $this->type === 'sell',
+                'items' => $items,
+                'date' => $this->transaction_date,
+                'buyer_name' => $this->contact->name ?? null,
+                'buyer_tax_number' => null,
+                'buyer_address' => null,
+                'buyer_city' => null,
+                'buyer_state' => null,
+                'buyer_postal' => null,
+                'buyer_building_no' => null
+            ];
+        }
+
+        protected function prepareZatcaItems()
+        {
+            return $this->sell_lines->map(function($item) {
+                return [
+                    'name' => $item->product?->name,
+                    'quantity' => $item->quantity,
+                    'price' => round($item->unit_price, 2),
+                    'vat' => round(round($item->unit_price, 2) * 0.15, 2)
+                ];
+            })->toArray();
+        }
+    }
+    ```
+  </Accordion>
+
+  <Accordion icon="wand-magic-sparkles" title="Fluent Interface">
+    Create invoices using the fluent interface:
+
+    ```php
+    $invoice = Zatca::prepare()
+        ->setInvoiceNumber('INV-001')
+        ->setTotalAmount(115.00)
+        ->setVatAmount(15.00)
+        ->setBuyerName('John Doe')
+        ->setBuyerTaxNumber('1234567890')
+        ->setBuyerAddress('123 Main St')
+        ->setBuyerCity('Riyadh')
+        ->setBuyerState('Riyadh')
+        ->setBuyerPostal('12345')
+        ->setBuyerBuildingNumber('1234')
+        ->isPOS()
+        ->isInvoice(true)
+        ->setDate(now())
+        ->addItem('Product 1', 1, 100.00, 15.00);
     ```
   </Accordion>
 </AccordionGroup>
 
 ## Working with Invoices
 
-### Submit Invoices
+### Submission Methods
+
 <CardGroup>
   <Card title="Basic Submission" icon="paper-plane">
-    Submit an invoice using the basic method:
     ```php
-    $order = Order::find(1);
-    $result = $order->submitToZatca();
+    $result = $order->submitToZatca($invoice->toArray());
     ```
   </Card>
+
   <Card title="Custom Data" icon="pen-to-square">
-    Submit with custom invoice data:
     ```php
     $result = $order->submitToZatca([
         'invoice_number' => 'INV-001',
-        'buyer_name' => 'Customer Name',
-        'buyer_vat' => '1234567890',
-        'total_amount' => 100,
-        'vat_amount' => 15,
+        'total_amount' => 115.00,
+        'vat_amount' => 15.00,
         'items' => [
             [
                 'name' => 'Product 1',
                 'quantity' => 1,
-                'price' => 100,
-                'vat' => 15
+                'price' => 100.00,
+                'vat' => 15.00
             ]
         ]
     ]);
@@ -95,128 +206,227 @@ Learn how to install and configure the Zatca package for your Laravel applicatio
   </Card>
 </CardGroup>
 
-### Custom Data Handling
-<Note>
-You can override the default methods in your model for custom data preparation:
-</Note>
+### Status Management
 
-```php
-class Order extends Model
-{
-    use HasZatcaInvoice;
-
-    protected function prepareZatcaInvoiceData()
-    {
-        return [
-            'invoice_number' => $this->custom_number,
-            'buyer_name' => $this->client->name,
-            // Additional custom data
-        ];
-    }
-
-    protected function prepareZatcaItems()
-    {
-        return $this->orderItems->map(function($item) {
-            return [
-                'name' => $item->product->name,
-                'quantity' => $item->quantity,
-                'price' => $item->unit_price,
-                'vat' => $item->tax_amount
-            ];
-        })->toArray();
-    }
-}
-```
-
-## Status Management
-
-### Verify Invoice Status
 <CardGroup>
-  <Card title="Check Submission" icon="check">
+  <Card title="Check Status" icon="magnifying-glass">
     ```php
     if ($order->isSubmittedToZatca()) {
-        // Successfully submitted
+        $status = $order->getZatcaStatus();
+        
+        if ($order->hasZatcaErrors()) {
+            $errors = $order->getZatcaErrors();
+        }
     }
     ```
   </Card>
-  <Card title="Get Status" icon="circle-info">
+</CardGroup>
+
+## API Reference
+
+### Available Facades
+
+<AccordionGroup>
+  <Accordion icon="microchip" title="Device Facade">
     ```php
-    $status = $order->getZatcaStatus();
+    Device::register(string|int $businessId, string $otp, array $companyData);
+    Device::activate(string|int $businessId);
+    Device::hasDevice(string|int $businessId);
+    Device::getDevice(string|int $businessId);
+    Device::getDeviceStatus(string|int $businessId);
+    Device::isDeviceActive(string|int $businessId);
     ```
+  </Accordion>
+
+  <Accordion icon="file-invoice" title="Zatca Facade">
+    ```php
+    Zatca::prepare();
+    Zatca::submitInvoice(string|int $businessId, array $invoiceData);
+    Zatca::submitSimplifiedInvoice(string|int $businessId, array $invoiceData);
+    Zatca::submitStandardInvoice(string|int $businessId, array $invoiceData);
+    Zatca::submitCreditNote(string|int $businessId, array $invoiceData);
+    Zatca::submitDebitNote(string|int $businessId, array $invoiceData);
+    Zatca::getInvoiceStatus(string|int $businessId, string $invoiceNumber);
+    Zatca::getInvoiceReport(string|int $businessId, string $invoiceNumber);
+    Zatca::clearInvoice(string|int $businessId, string $invoiceNumber);
+    Zatca::reportInvoice(string|int $businessId, string $invoiceNumber);
+    Zatca::registerDevice(string|int $businessId, string $otp, array $companyData);
+    Zatca::validateInvoice(array $invoiceData);
+    Zatca::generateQRCode(array $invoiceData);
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### Trait Methods
+
+<CardGroup>
+  <Card title="HasZatcaDevice Methods" icon="gear">
+    * `device()` - Get device relationship
+
+    * `registerZatcaDevice()` - Register new device
+
+    * `active()` - Activate device
+
+    * `hasZatcaDevice()` - Check device existence
+
+    * `getLatestZatcaDevice()` - Get latest device
+
+    * `scopeHasZatca()` - Query scope for models with active devices
+
+    * `scopeDoesntHaveZatca()` - Query scope for models without active devices
   </Card>
-  <Card title="Check Errors" icon="triangle-exclamation">
-    ```php
-    if ($order->hasZatcaErrors()) {
-        $errors = $order->getZatcaErrors();
-    }
-    ```
+
+  <Card title="HasZatcaInvoice Methods" icon="file-lines">
+    * `order()` - Get order relationship
+
+    * `prepareZatcaInvoiceData()` - Prepare invoice data
+
+    * `prepareZatcaItems()` - Prepare items data
+
+    * `submitToZatca()` - Submit invoice
+
+    * `isSubmittedToZatca()` - Check submission status
+
+    * `getZatcaStatus()` - Get invoice status
+
+    * `hasZatcaErrors()` - Check for errors
+
+    * `getZatcaErrors()` - Get error details
+
+    * `update_last_hash($hash)` - Update last invoice hash
+
+    * `last_hash()` - Get last invoice hash
   </Card>
 </CardGroup>
 
 ## Database Structure
 
-### Tables Schema
+### Schema Details
+
 <AccordionGroup>
-  <Accordion icon="table" title="hazem_devices_zatca">
-    Stores registered device information:
-    
-    - `id` - Serial identifier
-    - `deviceable_type` - Associated model type
-    - `deviceable_id` - Associated model ID
-    - `request_id` - ZATCA request ID
-    - `disposition_message` - Status message
-    - `binary_security_token` - Security token
-    - `secret` - Secret key
-    - `errors` - Errors (JSON)
-    - `private_key` - Private key
-    - `public_key` - Public key
-    - `csr_content` - CSR content
+  <Accordion icon="table" title="devices_zatca">
+    * `id` - Primary key
+
+    * `deviceable_type` - Model type
+
+    * `deviceable_id` - Model ID
+
+    * `request_id` - ZATCA request ID
+
+    * `status` - Device status
+
+    * `disposition_message` - Status message
+
+    * `binary_security_token` - Security token
+
+    * `secret` - Device secret
+
+    * `errors` - Error messages (JSON)
+
+    * `private_key` - Private key
+
+    * `public_key` - Public key
+
+    * `csr_content` - CSR content
+
+    * `timestamps`
   </Accordion>
-  <Accordion icon="table" title="hazem_orders_zatca">
-    Stores submitted invoice information:
-    
-    - `id` - Serial identifier
-    - `orderable_type` - Associated model type
-    - `orderable_id` - Associated model ID
-    - `invoice_number` - Invoice number
-    - `uuid` - Unique identifier
-    - `invoice_hash` - Invoice hash
-    - `signed_invoice_xml` - Signed XML
-    - `status` - Invoice status
-    - `is_reported` - Reporting status
-    - `is_cleared` - Clearance status
-    - `warnings` - Warnings (JSON)
-    - `errors` - Errors (JSON)
-    - `response` - Complete response (JSON)
-    - `submitted_at` - Submission timestamp
+
+  <Accordion icon="table" title="orders_zatca">
+    * `id` - Primary key
+
+    * `orderable_type` - Model type
+
+    * `orderable_id` - Model ID
+
+    * `invoice_number` - Invoice number
+
+    * `uuid` - Unique identifier
+
+    * `invoice_hash` - Invoice hash
+
+    * `signed_invoice_xml` - Signed XML
+
+    * `status` - Invoice status
+
+    * `is_reported` - Reporting status
+
+    * `is_cleared` - Clearance status
+
+    * `warnings` - Warning messages (JSON)
+
+    * `errors` - Error messages (JSON)
+
+    * `response` - Full response (JSON)
+
+    * `submitted_at` - Submission timestamp
+
+    * `timestamps`
+  </Accordion>
+
+  <Accordion icon="table" title="company_data">
+    * `id` - Primary key
+
+    * `solution_name` - Solution name
+
+    * `solution_version` - Solution version
+
+    * `business_category` - Business category
+
+    * `vat_no` - VAT number
+
+    * `ci_no` - Commercial registration number
+
+    * `company_name` - Company name
+
+    * `company_address` - Company address
+
+    * `company_building` - Building number
+
+    * `company_plot_identification` - Plot ID
+
+    * `company_city_subdivision` - City subdivision
+
+    * `company_city` - City
+
+    * `company_postal` - Postal code
+
+    * `company_country` - Country code
+
+    * `company_state` - State
+
+    * `company_phone` - Phone number
+
+    * `company_email` - Email address
+
+    * `timestamps`
   </Accordion>
 </AccordionGroup>
 
-## Available Methods
+## Security Features
 
-### Trait Methods
-<CardGroup>
-  <Card title="HasZatcaDevice Trait" icon="microchip">
-    - `zatcaDevice()` - ZATCA device relationship
-    - `registerZatcaDevice()` - Register new device
-    - `hasZatcaDevice()` - Check device existence
-    - `getLatestZatcaDevice()` - Get latest device
-  </Card>
-  <Card title="HasZatcaInvoice Trait" icon="file-invoice">
-    - `zatcaOrders()` - ZATCA orders relationship
-    - `latestZatcaOrder()` - Get latest order
-    - `submitToZatca()` - Submit invoice
-    - `isSubmittedToZatca()` - Check submission status
-    - `getZatcaStatus()` - Get invoice status
-    - `hasZatcaErrors()` - Check for errors
-    - `getZatcaErrors()` - Get error details
-  </Card>
-</CardGroup>
+<Note>
+  The package implements several security measures:
+
+  * Row Level Security (RLS) enabled for all tables
+
+  * Hash chaining for invoice integrity
+
+  * Secure storage of private keys and secrets
+
+  * Authentication required for all operations
+
+  * Data access controlled through policies
+</Note>
 
 ## Contributing and License
 
-<Note>
-  Contributions are welcome! Please submit pull requests to our GitHub repository.
-</Note>
+<CardGroup>
+  <Card title="Contributing" icon="code-pull-request">
+    Contributions are welcome! Please feel free to submit a Pull Request.
+  </Card>
 
-Licensed under the MIT License.
+  <Card title="License" icon="scale">
+    This package is open-sourced software licensed under the MIT license.
+  </Card>
+</CardGroup>
