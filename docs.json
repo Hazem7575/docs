@@ -18,6 +18,20 @@
     }
   },
   "favicon": "/favicon.svg",
+  "style": {
+    "code": {
+      "theme": "github-dark", // يمكنك اختيار: github-dark, github-light, dracula, monokai, etc.
+      "scrollbar": true,
+      "lineNumbers": true, 
+      "syntax": {
+        "keyword": "#ff79c6",
+        "string": "#f1fa8c",
+        "function": "#50fa7b",
+        "variable": "#bd93f9",
+        "comment": "#6272a4"
+      }
+    }
+  }
   "navigation": {
     "tabs": [
       {
