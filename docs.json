@@ -20,7 +20,7 @@
   "favicon": "/favicon.svg",
   "style": {
     "code": {
-      "theme": "github-dark", // يمكنك اختيار: github-dark, github-light, dracula, monokai, etc.
+      "theme": "github-light", // يمكنك اختيار: github-dark, github-light, dracula, monokai, etc.
       "scrollbar": true,
       "lineNumbers": true, 
       "syntax": {
