@@ -53,22 +53,6 @@ description: 'ZATCA (Fatoora) e-invoicing implementation for Saudi Arabia'
 
     ```env
     ZATCA_LIVE=false
-    ZATCA_VAT_NO=
-    ZATCA_COMPANY_NAME=
-    ZATCA_SOLUTION_NAME=PREZATCA
-    ZATCA_SOLUTION_VERSION=1.0
-    ZATCA_BUSINESS_CATEGORY=Contracting
-    ZATCA_CI_NO=
-    ZATCA_COMPANY_ADDRESS=
-    ZATCA_COMPANY_BUILDING=
-    ZATCA_COMPANY_PLOT_ID=
-    ZATCA_COMPANY_CITY_SUBDIVISION=
-    ZATCA_COMPANY_CITY=
-    ZATCA_COMPANY_POSTAL=
-    ZATCA_COMPANY_COUNTRY=SA
-    ZATCA_COMPANY_STATE=
-    ZATCA_COMPANY_PHONE=
-    ZATCA_COMPANY_EMAIL=
     ```
   </Accordion>
 </AccordionGroup>
@@ -95,11 +79,21 @@ description: 'ZATCA (Fatoora) e-invoicing implementation for Saudi Arabia'
     Register a new ZATCA device:
 
     ```php
-    $order = Order::find(1);
-    $device = $order->registerZatcaDevice($otp, [
-        'vat_no' => '123456789',
-        'company_name' => 'My Company',
-    ]);
+    $business = Store::find(1);
+    $device = $business->registerZatcaDevice($request->otp, [
+                'vat_no' => $request->tax_number,
+                'ci_no' => $request->registration_number,
+                'company_name' => $request->organization_name,
+                'company_address' => $request->registered_address,
+                'company_building' => $request->building_number,
+                'company_plot_identification' => $request->plot_identification,
+                'company_city_subdivision' => $request->city_sub_division,
+                'company_city' => $request->city,
+                'company_postal' => $request->postal_number,
+                'company_country' => 'SA',
+                'solution_name' => 'MADA',
+                'common_name' => $request->common_name,
+            ]);
     ```
   </Card>
 </CardGroup>
